@@ -32,3 +32,6 @@ dist/
 *.sqlite3
 *.db
 *.env
+
+# Real data - NEVER commit
+bank_statement_2025.xlsx

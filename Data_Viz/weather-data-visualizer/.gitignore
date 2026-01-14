@@ -1,7 +1,0 @@
-# Ignore Python cache and temporary files
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.env
-.env

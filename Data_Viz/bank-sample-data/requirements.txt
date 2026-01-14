@@ -1,4 +1,0 @@
-# Minimal runtime dependencies for my_bank_statement.py
-matplotlib>=3.5
-icecream>=2.1
-
