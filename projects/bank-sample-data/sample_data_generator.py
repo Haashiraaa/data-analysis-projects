@@ -1,16 +1,14 @@
+
+
 # sample_data_generator.py
 
 import pandas as pd
 import numpy as np
-import logging
+import sys
 from datetime import datetime, timedelta
-from haashi_pkg.utility.utils import Utility
 
 
-ut = Utility(level=logging.WARNING)
-
-
-def generate_sample_bank_statement(num_transactions: int = 100) -> pd.DataFrame:
+def generate_sample_bank_statement(num_transactions: int = 100) -> None:
     """Generate fake bank statement data for demo purposes."""
 
     np.random.seed(42)  # Reproducible fake data
@@ -46,13 +44,14 @@ def generate_sample_bank_statement(num_transactions: int = 100) -> pd.DataFrame:
         "Transaction Reference": [f"REF{i:06d}" for i in range(num_transactions)]
     })
 
-    return df.sort_values("Trans. Date").reset_index(drop=True)
+    df = df.sort_values("Trans. Date").reset_index(drop=True)
+    df.to_excel("data/sample_bank_statement_2025.xlsx", index=False)
+    print("Sample data generated!")
 
 
 if __name__ == "__main__":
-    # Generate and save sample data
-    sample_df = generate_sample_bank_statement(150)
-    path = ut.ensure_writable_path("dataset/sample_bank_statement_2025.xlsx")
-    sample_df.to_excel(path, index=False)
-    print("Sample data generated!")
-
+    try:
+        generate_sample_bank_statement()
+    except KeyboardInterrupt:
+        print("\n\nInterrupted by user")
+        sys.exit(0)

@@ -1,13 +1,14 @@
 
 # analyze_data.py
 
-
+import sys
 from haashi_pkg.data_engine.dataloader import DataLoader
 from haashi_pkg.data_engine.dataengine import DataEngine
 from pandas import DataFrame
 
+# pyright: basic
 
-FILE_PATH = "cleaned_data/cleaned_bank_statement_2025.parquet"
+FILE_PATH = "data/cleaned_bank_statement_2025.parquet"
 
 dl = DataLoader(FILE_PATH)
 de = DataEngine()
@@ -52,10 +53,3 @@ def aggregations() -> ReturnLike:
         len(bank_st_df),
         max_expense
     )
-
-
-"""
-
-if __name__ == "__main__":
-    aggregations()
-"""

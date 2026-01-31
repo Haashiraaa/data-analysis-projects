@@ -5,11 +5,14 @@ import sys
 import matplotlib.dates as mdates
 from haashi_pkg.plot_engine.plotengine import PlotEngine
 from analyze_data import analyze_data
+from typing import Dict
 
-SAVEPATH: str = "_03_plot_images/revenue_by_category.png"
+# pyright: basic
+
+PLOTPATH: str = "data/plots/retail_sales_plots.png"
 
 
-def visualize_data() -> None:
+def visualize_data(PLOTPATH: str) -> None:
 
     pe = PlotEngine()
 
@@ -159,7 +162,7 @@ def visualize_data() -> None:
 
     tr = monthly_revenue.total_revenue
 
-    stats = {
+    stats: Dict[str, str | int | float] = {
         "Total Sales": f"{len(sales_df)}",
         "Total Revenue": f"${tr.sum():,.2f}",
         "Avg Revenue Per Month": f"${tr.mean():,.2f}",
@@ -184,7 +187,7 @@ def visualize_data() -> None:
     # -----------
     pe.save_or_show(
         fig,
-        save_path=SAVEPATH,
+        save_path=PLOTPATH,
         show=False,
         use_tight_layout=False
     )
@@ -192,7 +195,7 @@ def visualize_data() -> None:
 
 if __name__ == "__main__":
     try:
-        visualize_data()
+        visualize_data(PLOTPATH)
     except KeyboardInterrupt:
         print()
         sys.exit(1)

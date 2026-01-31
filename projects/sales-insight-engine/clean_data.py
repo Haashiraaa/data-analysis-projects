@@ -15,8 +15,11 @@ from haashi_pkg.data_engine.datasaver import DataSaver
 from haashi_pkg.utility.utils import Utility
 
 
-FILEPATH: str = "_01_csv_files/retail_sales.csv"
-SAVEPATH: str = "_02_cleaned_data/retail_sales.parquet"
+# pyright: basic
+
+
+FILEPATH: str = "data/retail_sales.csv"
+SAVEPATH: str = "data/cleaned_retail_sales.parquet"
 
 de = DataEngine()
 
@@ -29,7 +32,7 @@ def inspection_and_validation(
 
     if start_inspect:
 
-        all_columns = [col for col in df.columns]
+        all_columns: list[str] = [col for col in df.columns]
         missing_vals = de.count_missing(df, all_columns)
         Utility(level=logging.INFO).debug(missing_vals)
 
@@ -46,7 +49,10 @@ def inspection_and_validation(
                 Utility(level=logging.INFO).debug(dve)
 
 
-def clean_data() -> None:
+def clean_data(
+    FILEPATH: str,
+    SAVEPATH: str
+) -> None:
 
     sales_df = DataLoader(FILEPATH).load_csv_single()
 
@@ -56,7 +62,7 @@ def clean_data() -> None:
 
     de.inspect_dataframe(sales_df, verbose=False)
 
-    inspection_and_validation(sales_df, ["price", "quantity"], False)
+    inspection_and_validation(sales_df, ["price", "quantity"], True)
 
     # ================
     # Cleaning
@@ -99,7 +105,7 @@ def clean_data() -> None:
 
 if __name__ == "__main__":
     try:
-        clean_data()
+        clean_data(FILEPATH, SAVEPATH)
     except KeyboardInterrupt:
         print()
         sys.exit(1)

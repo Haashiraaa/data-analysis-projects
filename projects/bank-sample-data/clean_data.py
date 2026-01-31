@@ -14,11 +14,11 @@ USE_FAKE_DATA: bool = True
 
 
 if USE_FAKE_DATA:
-    FILEPATH: str = "dataset/sample_bank_statement_2025.xlsx"
+    FILEPATH: str = "data/sample_bank_statement_2025.xlsx"
 else:
-    FILEPATH: str = "dataset/bank_statement_2025.xlsx"
+    FILEPATH: str = "data/bank_statement_2025.xlsx"
 
-SAVEPATH: str = "cleaned_data/cleaned_bank_statement_2025.parquet"
+SAVEPATH: str = "data/cleaned_bank_statement_2025.parquet"
 
 MASKING_RULES = {
     "Transfer": "Transfers",
@@ -51,10 +51,12 @@ def drop_description(
 def clean_data() -> None:
 
     # load data
-    if USE_FAKE_DATA:
-        bank_st_df = dl.load_excel_single(skip_rows=0)
-    else:
-        bank_st_df = dl.load_excel_single(skip_rows=6)
+
+    bank_st_df = (
+        dl.load_excel_single(skip_rows=0)
+        if USE_FAKE_DATA
+        else dl.load_excel_single(skip_rows=6)
+    )
 
     # inspect data
     de.inspect_dataframe(bank_st_df, verbose=False)

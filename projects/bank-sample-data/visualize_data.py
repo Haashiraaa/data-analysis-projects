@@ -4,15 +4,15 @@
 
 import matplotlib.dates as mdates
 
+import sys
 from haashi_pkg.plot_engine.plotengine import PlotEngine
 from analyze_data import aggregations
 
+# pyright: basic
 
 pe = PlotEngine()
 
-
-SAVE_PATH: str = "plot_images/bank_statement_2025.png"
-
+SAVE_PATH: str = "data/plots/bank_statement_2025.png"
 SET_COLOR: list[str] = pe.colors_vibrant[:3] + [pe.colors_vibrant[-1]]
 
 
@@ -172,7 +172,12 @@ def visualize_data() -> None:
     pe.save_or_show(
         fig, save_path=SAVE_PATH, show=False, use_tight_layout=False
     )
+    print("Data visualized and saved to", SAVE_PATH)
 
 
 if __name__ == "__main__":
-    visualize_data()
+    try:
+        visualize_data()
+    except KeyboardInterrupt:
+        print("\n\nInterrupted by user")
+        sys.exit(0)

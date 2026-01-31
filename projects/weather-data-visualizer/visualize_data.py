@@ -1,18 +1,21 @@
 
+
 # visualize_data.py
 
-import matplotlib.dates as mdates
+
 from clean_data import clean_data
 from haashi_pkg.plot_engine.plotengine import PlotEngine
+import sys
 
-SAVE_PATH: str = "_02_plot_images/weather_data.png"
+FILEPATH = "data/4150697.csv"
+PLOT_PATH: str = "data/plots/weather_data.png"
 
 pe = PlotEngine()
 
 
-def visualize_data() -> None:
+def visualize_data(PLOT_PATH: str, FILEPATH: str) -> None:
 
-    weather_data_df, station_name, start_str, end_str = clean_data()
+    weather_data_df, station_name, start_str, end_str = clean_data(FILEPATH)
     dates = weather_data_df["date"].dt.to_period("D")
     dates = dates.dt.to_timestamp()
 
@@ -67,9 +70,14 @@ def visualize_data() -> None:
     pe.set_axis_limits(ax, y_from_zero=True)
 
     pe.save_or_show(
-        fig, save_path=SAVE_PATH, show=False, use_tight_layout=True
+        fig, save_path=PLOT_PATH, show=False, use_tight_layout=True
     )
+    print(f"Plot saved to {PLOT_PATH}")
 
 
 if __name__ == "__main__":
-    visualize_data()
+    try:
+        visualize_data(PLOT_PATH, FILEPATH)
+    except KeyboardInterrupt:
+        print("\nVisualization process interrupted.")
+        sys.exit(0)

@@ -11,9 +11,11 @@ from haashi_pkg.utility.utils import Utility
 from pandas import DataFrame
 from typing import Optional
 
-FILEPATH: str = "_02_cleaned_data/retail_sales.parquet"
 
-RETURN: bool = True
+# pyright: basic
+
+FILEPATH: str = "data/cleaned_retail_sales.parquet"
+
 
 ReturnLike = Optional[
     tuple[DataFrame, DataFrame, DataFrame, DataFrame, str, str]
@@ -46,7 +48,7 @@ def retail_data_label(df: DataFrame, date_col_name: str) -> tuple[str, ...]:
     return start_str, end_str
 
 
-def analyze_data() -> ReturnLike:
+def analyze_data(can_return: bool = True) -> ReturnLike:
 
     sales_df = DataLoader(FILEPATH).load_parquet_single()
     DataEngine().inspect_dataframe(sales_df, verbose=False)
@@ -83,7 +85,7 @@ def analyze_data() -> ReturnLike:
 
     start_date, end_date = retail_data_label(sales_df, "sale_date")
 
-    if RETURN:
+    if can_return:
         return (
             sales_df,
             revenue_by_cat,

@@ -12,7 +12,6 @@ from typing import Optional
 FILEPATH = "4150697.csv"
 DEBUG = False
 
-dl = DataLoader(FILEPATH)
 de = DataEngine()
 ut = Utility(level=logging.INFO)
 
@@ -37,9 +36,9 @@ def get_station_labels(
     return (station_name, start_str, end_str)
 
 
-def clean_data() -> Optional[tuple[DataFrame, str, str, str]]:
+def clean_data(FILEPATH: str) -> Optional[tuple[DataFrame, str, str, str]]:
 
-    weather_data_df = dl.load_csv_single()
+    weather_data_df = DataLoader(FILEPATH).load_csv_single()
 
     # Initial inspection of dataset -> First 5 rows
     de.inspect_dataframe(weather_data_df, verbose=False)
@@ -89,7 +88,7 @@ def clean_data() -> Optional[tuple[DataFrame, str, str, str]]:
 
 if __name__ == "__main__":
     try:
-        clean_data()
+        clean_data(FILEPATH)
     except KeyboardInterrupt:
         print("\nCleaning process interrupted.")
         sys.exit(0)

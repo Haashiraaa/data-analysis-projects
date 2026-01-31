@@ -1,0 +1,22 @@
+# Core Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=12.0.0
+
+# Excel File Handling
+openpyxl>=3.1.0
+
+# Data Visualization
+matplotlib>=3.7.0
+
+# Custom Package (required)
+# haashi_pkg: Custom data engineering and visualization toolkit
+# Repository: https://github.com/Haashiraaa/my-packages
+# Install with: pip install git+https://github.com/Haashiraaa/my-packages.git
+# 
+# This package provides:
+# - DataEngine: Data cleaning, validation, and transformation
+# - DataLoader: Efficient data loading (CSV, Excel, Parquet)
+# - DataSaver: Optimized data storage operations
+# - PlotEngine: Professional visualization toolkit
+# - Utility: Logging and debugging tools

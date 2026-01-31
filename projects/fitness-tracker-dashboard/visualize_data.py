@@ -4,12 +4,17 @@
 
 from setup_data import setup_data
 from haashi_pkg.plot_engine.plotengine import PlotEngine
+import sys
 
+
+# pyright: basic
 
 pe = PlotEngine()
 
 
-def main():
+def visualize_data(
+    SAVE_PATH: str = "data/plots/fitness_tracker_dashboard.png"
+):
     ws_df, um_df = setup_data()
 
     # Create 2x2 grid
@@ -67,7 +72,9 @@ def main():
         color=pe.colors_01[0:3]
     )
 
-    pe.set_labels_and_title(ax2, "Total Calories Burned", "Users", "Calories")
+    pe.set_labels_and_title(
+        ax2, "Total Calories Burned", "Users", "Calories"
+    )
     pe.add_margins(ax2, ypad=0.45)
     pe.set_axis_limits(ax2, y_from_zero=True)
     pe.add_value_labels_on_bars(ax2, format_string="{:.0f}", color="white")
@@ -137,11 +144,17 @@ def main():
     # -------------------
     pe.save_or_show(
         fig,
-        save_path="plot_images/fitness_tracker_dashboard.png",
+        save_path=SAVE_PATH,
         show=False,
         bottom=0.5
     )
 
+    print(f"Plot saved to {SAVE_PATH}")
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        visualize_data()
+    except KeyboardInterrupt:
+        print("\n\nInterrupted by user")
+        sys.exit(0)
