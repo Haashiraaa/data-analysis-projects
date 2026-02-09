@@ -19,6 +19,7 @@ Thumbs.db
 # Logs and temp files
 *.log
 *.tmp
+logs/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
@@ -33,5 +34,22 @@ dist/
 *.db
 *.env
 
-# Real data - NEVER commit
+# Real data
 bank_statement_2025.xlsx
+
+# Data files 
+
+# Batch 1
+cleaned_retail_sales.parquet
+retail_sales_plots.png
+
+# Batch 2
+cleaned_bank_statement_2025.parquet
+sample_bank_statement_2025.xlsx
+bank_statement_2025.png
+
+# Batch 3
+fitness_tracker_dashboard.png
+
+# Batch 4
+weather_data.png

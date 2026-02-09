@@ -2,20 +2,27 @@
 
 # plot_data.py
 
-from setup_data import setup_data
-from haashi_pkg.plot_engine.plotengine import PlotEngine
 import sys
+import logging
+from setup_data import setup_data
+from haashi_pkg.plot_engine import PlotEngine
+from haashi_pkg.utility import Logger
 
 
 # pyright: basic
 
-pe = PlotEngine()
+logger = Logger(level=logging.INFO)
 
 
 def visualize_data(
-    SAVE_PATH: str = "data/plots/fitness_tracker_dashboard.png"
+    savepath: str = "data/plots/fitness_tracker_dashboard.png",
+    logger: Logger = logger
 ):
-    ws_df, um_df = setup_data()
+
+    ws_df, um_df = setup_data(logger=logger)
+
+    logger.debug("Plotting data...")
+    pe = PlotEngine(logger=logger)
 
     # Create 2x2 grid
     fig, ((ax1, ax2), (ax3, ax4)) = pe.create_figure(
@@ -23,7 +30,7 @@ def visualize_data(
         gridspec_kw={"width_ratios": [2, 1], "height_ratios": [1, 1]}
     )
 
-    pe.set_suptitle("Fitness Tracker Dashboard", color="white")
+    pe.set_suptitle(fig, title="Fitness Tracker Dashboard", color="white")
 
     users: list[str] = ['alex', 'bree', 'carlos']
 
@@ -54,9 +61,14 @@ def visualize_data(
             marker='o'
         )
 
-    pe.set_labels_and_title(ax1, "Daily Steps", "Days", "Steps")
-    pe.add_margins(ax1, ypad=0.15)
-    pe.set_axis_limits(ax1, y_from_zero=True)
+    pe.add_margins(ax1, ypad=0.25)
+    pe.decorate(
+        ax1,
+        title="Daily Steps",
+        xlabel="Days",
+        ylabel="Steps",
+        ylim="zero"
+    )
     pe.add_reference_line(ax1, y=10000, label="Goal: 10K", color="cyan")
     pe.format_y_axis(ax1, currency="")
     pe.set_legend(ax1, loc="lower right")
@@ -72,11 +84,14 @@ def visualize_data(
         color=pe.colors_01[0:3]
     )
 
-    pe.set_labels_and_title(
-        ax2, "Total Calories Burned", "Users", "Calories"
-    )
     pe.add_margins(ax2, ypad=0.45)
-    pe.set_axis_limits(ax2, y_from_zero=True)
+    pe.decorate(
+        ax2,
+        title="Total Calories Burned",
+        xlabel="Users",
+        ylabel="Calories",
+        ylim="zero"
+    )
     pe.add_value_labels_on_bars(ax2, format_string="{:.0f}", color="white")
     pe.format_y_axis(ax2, currency="")
 
@@ -91,8 +106,14 @@ def visualize_data(
         color=pe.colors_01[0:3]
     )
 
-    pe.set_labels_and_title(ax3, "Average Sleep Hours", "Users", "Hours")
-    pe.set_axis_limits(ax3, ylim=(0, 10))
+    pe.add_margins(ax3, ypad=0.45)
+    pe.decorate(
+        ax3,
+        title="Average Sleep Hours",
+        xlabel="Users",
+        ylabel="Hours",
+        ylim="zero"
+    )
     pe.add_reference_line(ax3, y=7, label="Recommended: 7h", color="cyan")
     pe.add_value_labels_on_bars(ax3, format_string="{:.1f}", color="white")
     pe.set_legend(ax3, loc="upper right", fontsize=10)
@@ -119,12 +140,6 @@ def visualize_data(
     )
 
     # ---------------
-    # Set Text Colors
-    # ---------------
-
-    pe.set_text_colors((ax1, ax2, ax3))
-
-    # ---------------
     # Figure text
     # ---------------
 
@@ -144,12 +159,12 @@ def visualize_data(
     # -------------------
     pe.save_or_show(
         fig,
-        save_path=SAVE_PATH,
+        save_path=savepath,
         show=False,
         bottom=0.5
     )
 
-    print(f"Plot saved to {SAVE_PATH}")
+    logger.info(f"Plot saved to {savepath}")
 
 
 if __name__ == "__main__":

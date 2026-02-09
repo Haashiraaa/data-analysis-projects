@@ -58,7 +58,7 @@ This project uses **[haashi_pkg](https://github.com/Haashiraaa/my-packages)**, a
 # Clone the repository
 
 git clone https://github.com/Haashiraaa/data-analysis-projects.git
-cd projects &&cd bank-sample-data
+cd projects && cd bank-sample-data
 
 # Install haashi_pkg (custom package)
 pip install git+https://github.com/Haashiraaa/my-packages.git
@@ -71,6 +71,7 @@ pip install -r requirements.txt
 
 **Run the complete pipeline (with synthetic data generation):**
 ```bash
+cd pipeline
 python main.py
 ```
 

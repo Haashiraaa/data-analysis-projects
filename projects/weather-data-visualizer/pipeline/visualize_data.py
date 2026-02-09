@@ -2,23 +2,28 @@
 
 # visualize_data.py
 
-
-from clean_data import clean_data
-from haashi_pkg.plot_engine.plotengine import PlotEngine
 import sys
+import logging
+from clean_data import clean_data
+from haashi_pkg.plot_engine import PlotEngine
+from haashi_pkg.utility import Logger
 
-FILEPATH = "data/4150697.csv"
-PLOT_PATH: str = "data/plots/weather_data.png"
+# pyright: basic
 
-pe = PlotEngine()
+logger = Logger(level=logging.INFO)
 
 
-def visualize_data(PLOT_PATH: str, FILEPATH: str) -> None:
+def visualize_data(
+    plotpath: str = "data/plots/weather_data.png",
+    logger: Logger = logger,
+) -> None:
 
-    weather_data_df, station_name, start_str, end_str = clean_data(FILEPATH)
+    weather_data_df, station_name, start_str, end_str = clean_data()
     dates = weather_data_df["date"].dt.to_period("D")
     dates = dates.dt.to_timestamp()
 
+    logger.debug("Visualizing data...")
+    pe = PlotEngine(logger=logger)
     fig, ax = pe.create_figure(figsize=(14, 8))
 
     pe.set_background_color(
@@ -54,11 +59,16 @@ def visualize_data(PLOT_PATH: str, FILEPATH: str) -> None:
         alpha=0.1
     )
 
-    pe.set_labels_and_title(
+    pe.add_margins(ax, ypad=0.2)
+    pe.decorate(
         ax,
-        f"Daily Temperatures {start_str}-{end_str}\n{station_name}",
-        "Dates",
-        "Temperature (°F)"
+        title=f"Daily Temperatures {start_str}-{end_str}\n{station_name}",
+        xlabel="Date",
+        ylabel="Temperature (°F)",
+        title_color="black",
+        label_color="black",
+        tick_color="black",
+        ylim="zero",
     )
     pe.set_legend(
         ax,
@@ -66,18 +76,16 @@ def visualize_data(PLOT_PATH: str, FILEPATH: str) -> None:
         title="Temperature Category",
         title_fontproperties={"weight": "bold", "size": 12}
     )
-    pe.add_margins(ax, ypad=0.2)
-    pe.set_axis_limits(ax, y_from_zero=True)
 
     pe.save_or_show(
-        fig, save_path=PLOT_PATH, show=False, use_tight_layout=True
+        fig, save_path=plotpath, show=False, use_tight_layout=True
     )
-    print(f"Plot saved to {PLOT_PATH}")
+    logger.info(f"Plot saved to {plotpath}")
 
 
 if __name__ == "__main__":
     try:
-        visualize_data(PLOT_PATH, FILEPATH)
+        visualize_data()
     except KeyboardInterrupt:
-        print("\nVisualization process interrupted.")
+        logger.info("\nVisualization process interrupted.")
         sys.exit(0)

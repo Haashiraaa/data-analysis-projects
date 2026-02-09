@@ -5,12 +5,22 @@
 import pandas as pd
 import numpy as np
 import sys
+import logging
 from datetime import datetime, timedelta
+from haashi_pkg.utility import Logger, FileHandler
 
 
-def generate_sample_bank_statement(num_transactions: int = 100) -> None:
+logger = Logger(level=logging.INFO)
+
+
+def generate_sample_bank_statement(
+    num_transactions: int = 100,
+    logger: Logger = logger,
+    save_path: str = "data/sample_bank_statement_2025.xlsx"
+) -> None:
     """Generate fake bank statement data for demo purposes."""
 
+    logger.debug("Generating sample bank statement data...")
     np.random.seed(42)  # Reproducible fake data
 
     # Random dates in 2025
@@ -45,13 +55,16 @@ def generate_sample_bank_statement(num_transactions: int = 100) -> None:
     })
 
     df = df.sort_values("Trans. Date").reset_index(drop=True)
-    df.to_excel("data/sample_bank_statement_2025.xlsx", index=False)
-    print("Sample data generated!")
+    save_path = str(
+        FileHandler(logger=logger).ensure_writable_path(save_path)
+    )
+    df.to_excel(save_path, index=False)
+    logger.info("Sample bank statement data generated and saved" + save_path)
 
 
 if __name__ == "__main__":
     try:
         generate_sample_bank_statement()
     except KeyboardInterrupt:
-        print("\n\nInterrupted by user")
+        logger.info("\n\nInterrupted by user")
         sys.exit(0)

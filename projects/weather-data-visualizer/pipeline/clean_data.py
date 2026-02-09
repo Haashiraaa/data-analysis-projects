@@ -3,17 +3,14 @@
 
 import logging
 import sys
-from haashi_pkg.data_engine.dataloader import DataLoader
-from haashi_pkg.data_engine.dataengine import DataEngine
-from haashi_pkg.utility.utils import Utility
-from pandas import DataFrame
-from typing import Optional
+from haashi_pkg.data_engine import DataLoader, DataAnalyzer
+from haashi_pkg.utility import Logger
+from pandas import DataFrame, Series
+from typing import Iterable, Union
 
-FILEPATH = "4150697.csv"
-DEBUG = False
+# pyright: basic
 
-de = DataEngine()
-ut = Utility(level=logging.INFO)
+logger = Logger(level=logging.INFO)
 
 
 def get_station_labels(
@@ -36,21 +33,31 @@ def get_station_labels(
     return (station_name, start_str, end_str)
 
 
-def clean_data(FILEPATH: str) -> Optional[tuple[DataFrame, str, str, str]]:
+def clean_data(
+    filepath: str = "data/4150697.csv",
+    logger: Logger = logger,
+    can_return: bool = True,
+) -> Iterable[Union[DataFrame, str]] | None:
 
-    weather_data_df = DataLoader(FILEPATH).load_csv_single()
+    logger.debug("Loading data from file...")
+    weather_data_df = DataLoader(filepath, logger=logger).load_csv_single()
+
+    logger.debug("Cleaning data...")
+    analyze = DataAnalyzer(logger=logger)
 
     # Initial inspection of dataset -> First 5 rows
-    de.inspect_dataframe(weather_data_df, verbose=False)
+    analyze.inspect_dataframe(weather_data_df, verbose=False)
 
-    weather_data_df = de.normalize_column_names(weather_data_df)
+    weather_data_df = analyze.normalize_column_names(weather_data_df)
 
     # Converting Date column
-    weather_data_df["date"] = de.convert_datetime(weather_data_df["date"])
+    weather_data_df["date"] = analyze.convert_datetime(
+        Series(weather_data_df["date"])
+    )
 
     # Dropping missing rows
     # Initial inspection of missing rows
-    num_missing = de.count_missing(
+    num_missing = analyze.count_missing(
         weather_data_df, [col for col in weather_data_df.columns]
     )
 
@@ -58,7 +65,7 @@ def clean_data(FILEPATH: str) -> Optional[tuple[DataFrame, str, str, str]]:
     weather_data_df = weather_data_df.drop(missing_rows.index)
 
     # Final inspection of missing rows
-    num_missing = de.count_missing(
+    num_missing = analyze.count_missing(
         weather_data_df, [col for col in weather_data_df.columns]
     )
 
@@ -69,16 +76,10 @@ def clean_data(FILEPATH: str) -> Optional[tuple[DataFrame, str, str, str]]:
     )
 
     # Final inspection of dataset
-    de.inspect_dataframe(weather_data_df, verbose=False)
+    analyze.inspect_dataframe(weather_data_df, verbose=False)
 
-    ut.debug(num_missing)
-    ut.debug(missing_rows)
-    ut.debug(station_name)
-    ut.debug(start_str)
-    ut.debug(end_str)
-
-    if not DEBUG:
-        return (
+    if can_return:
+        return (  # type: ignore
             weather_data_df[["date", "tmax", "tmin"]],
             station_name,
             start_str,
@@ -88,7 +89,7 @@ def clean_data(FILEPATH: str) -> Optional[tuple[DataFrame, str, str, str]]:
 
 if __name__ == "__main__":
     try:
-        clean_data(FILEPATH)
+        clean_data(can_return=False)
     except KeyboardInterrupt:
-        print("\nCleaning process interrupted.")
+        logger.info("\nCleaning process interrupted.")
         sys.exit(0)

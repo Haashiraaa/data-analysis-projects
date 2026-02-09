@@ -5,18 +5,25 @@
 import matplotlib.dates as mdates
 
 import sys
-from haashi_pkg.plot_engine.plotengine import PlotEngine
+import logging
+from haashi_pkg.plot_engine import PlotEngine
+from haashi_pkg.utility import Logger
 from analyze_data import aggregations
 
 # pyright: basic
 
-pe = PlotEngine()
-
-SAVE_PATH: str = "data/plots/bank_statement_2025.png"
-SET_COLOR: list[str] = pe.colors_vibrant[:3] + [pe.colors_vibrant[-1]]
+logger = Logger(level=logging.INFO)
 
 
-def visualize_data() -> None:
+def visualize_data(
+    SAVE_PATH: str = "data/plots/bank_statement_2025.png",
+    logger: Logger = logger
+) -> None:
+
+    logger.debug("Visualizing data...")
+    pe = PlotEngine(logger=logger)
+
+    SET_COLOR: list[str] = pe.colors_vibrant[:3] + [pe.colors_vibrant[-1]]
 
     fig, gs = pe.create_custom_grid(2, 3)
     ax1 = fig.add_subplot(gs[0, :])
@@ -24,7 +31,9 @@ def visualize_data() -> None:
     ax3 = fig.add_subplot(gs[1, 1])
     ax4 = fig.add_subplot(gs[1, 2])
 
-    pe.set_suptitle("Bank Statement Analysis 2025", color="#4ECDC4")
+    pe.set_suptitle(
+        fig, title="Bank Statement Analysis 2025", color="#4ECDC4"
+    )
     gs.update(top=0.88, hspace=0.6)
 
     # ----------------
@@ -67,16 +76,18 @@ def visualize_data() -> None:
         True, alpha=0.15, color='#4ECDC4', linestyle='--', linewidth=0.8
     )
 
-    pe.set_labels_and_title(
+    pe.add_margins(ax1, ypad=0.25)
+    pe.decorate(
         ax1,
-        "Monthly Expenditure Breakdown",
-        "Months",
-        "Amount Spent (₦)"
+        title="Monthly Expenditure Breakdown",
+        xlabel="Months",
+        ylabel="Amount Spent (₦)",
+        ylim="zero",
     )
-    pe.add_margins(ax1, ypad=0.08)
+
+    pe.decorate
     pe.force_xticks(ax1, months, months)  # type: ignore
     ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
-    pe.set_axis_limits(ax1, y_from_zero=True)
     pe.format_y_axis(ax1, currency="₦")
 
     # ---------------------------------
@@ -91,10 +102,14 @@ def visualize_data() -> None:
         color=SET_COLOR
     )
 
-    pe.set_labels_and_title(
-        ax2, "Categorical Expenditure", "Category", "Amount Spent (₦)"
-    )
     pe.add_margins(ax2, ypad=0.4)
+    pe.decorate(
+        ax2,
+        title="Categorical Expenditure",
+        xlabel="Category",
+        ylabel="Amount Spent (₦)"
+    )
+
     pe.add_value_labels_on_bars(
         ax2, format_string="₦{:,.2f}", fontsize=8, color="white"
     )
@@ -139,7 +154,7 @@ def visualize_data() -> None:
         fancybox=True
     )
 
-    pe.set_labels_and_title(ax3, "Category Share (%)")
+    pe.decorate(ax3, title="Category Share (%)")
 
     # -----------------
     # Stats Summary Box
@@ -159,12 +174,6 @@ def visualize_data() -> None:
         fontsize=13
     )
 
-    # -----------------------
-    # Set Text Colors
-    # -----------------------
-
-    pe.set_text_colors((ax1, ax2, ax3))
-
     # -----------
     # Saving plot
     # -----------
@@ -172,12 +181,12 @@ def visualize_data() -> None:
     pe.save_or_show(
         fig, save_path=SAVE_PATH, show=False, use_tight_layout=False
     )
-    print("Data visualized and saved to", SAVE_PATH)
+    logger.info("Data visualized and saved to " + SAVE_PATH)
 
 
 if __name__ == "__main__":
     try:
         visualize_data()
     except KeyboardInterrupt:
-        print("\n\nInterrupted by user")
+        logger.info("\n\nInterrupted by user")
         sys.exit(0)

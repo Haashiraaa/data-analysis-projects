@@ -78,6 +78,7 @@ pip install -r requirements.txt
 
 **Run the complete pipeline:**
 ```bash
+cd pipeline
 python main.py
 ```
 

@@ -55,7 +55,7 @@ This project uses **[haashi_pkg](https://github.com/Haashiraaa/my-packages)**, a
 
 ```bash
 # Clone the repository
-git clone https://github.com/Haashiraaa/data-analysis-projects.git            cd projects && cd fitness-tracker-dashboard
+git clone https://github.com/Haashiraaa/data-analysis-projects.git            cd projects && cd fitness-tracker-dashboard 
 
 # Install haashi_pkg (custom package)
 pip install git+https://github.com/Haashiraaa/my-packages.git
@@ -68,6 +68,7 @@ pip install -r requirements.txt
 
 ```bash
 # Generate the dashboard
+cd pipeline
 python main.py
 ```
 

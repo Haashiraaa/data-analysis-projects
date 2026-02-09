@@ -5,17 +5,16 @@
 
 import sys
 import logging
-from haashi_pkg.data_engine.dataengine import DataEngine
-from haashi_pkg.data_engine.dataloader import DataLoader
-from haashi_pkg.utility.utils import Utility
+from haashi_pkg.data_engine import DataAnalyzer, DataLoader
+from haashi_pkg.utility import Logger
 from pandas import DataFrame
 from typing import Optional
 
 
 # pyright: basic
 
-FILEPATH: str = "data/cleaned_retail_sales.parquet"
-
+logger = Logger(level=logging.INFO)
+analyze = DataAnalyzer(logger)
 
 ReturnLike = Optional[
     tuple[DataFrame, DataFrame, DataFrame, DataFrame, str, str]
@@ -31,7 +30,7 @@ def _01_aggregate_helper_func(
     asc: bool = True
 ) -> DataFrame:
 
-    return DataEngine().aggregate(
+    return analyze.aggregate(
         df, target_col_name, groupby_col_name, op="sum"
     ).reset_index().sort_values(
         by=sort_col_name, ascending=asc
@@ -48,11 +47,16 @@ def retail_data_label(df: DataFrame, date_col_name: str) -> tuple[str, ...]:
     return start_str, end_str
 
 
-def analyze_data(can_return: bool = True) -> ReturnLike:
+def analyze_data(
+    filepath: str = "data/cleaned_retail_sales.parquet",
+    logger: Logger = logger,
+    can_return: bool = True
+) -> ReturnLike:
 
-    sales_df = DataLoader(FILEPATH).load_parquet_single()
-    DataEngine().inspect_dataframe(sales_df, verbose=False)
+    sales_df = DataLoader(filepath, logger=logger).load_parquet_single()
+    analyze.inspect_dataframe(sales_df, verbose=False)
 
+    logger.debug("Analyzing data..")
     # Revenue per category
     revenue_by_cat = _01_aggregate_helper_func(
         sales_df, "revenue", "category", "revenue", "total_revenue", False
@@ -72,7 +76,7 @@ def analyze_data(can_return: bool = True) -> ReturnLike:
         "M"
     )["total_revenue"].sum().pct_change().reset_index()
 
-    revenue_by_month = DataEngine().merge(
+    revenue_by_month = analyze.merge(
         revenue_by_month, pct_change, "sale_month",
     ).rename(columns={
         "total_revenue_x": "total_revenue",
@@ -85,6 +89,8 @@ def analyze_data(can_return: bool = True) -> ReturnLike:
 
     start_date, end_date = retail_data_label(sales_df, "sale_date")
 
+    logger.info("Data analyzed")
+
     if can_return:
         return (
             sales_df,
@@ -95,14 +101,10 @@ def analyze_data(can_return: bool = True) -> ReturnLike:
             end_date,
         )
 
-    Utility(level=logging.INFO).debug(revenue_by_cat)
-    Utility(level=logging.INFO).debug(revenue_by_region)
-    Utility(level=logging.INFO).debug(revenue_by_month)
-
 
 if __name__ == "__main__":
     try:
-        analyze_data()
+        analyze_data(can_return=False)
     except KeyboardInterrupt:
-        print()
+        logger.info("Program terminated by user")
         sys.exit(1)
