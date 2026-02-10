@@ -1,95 +1,130 @@
 
+
 # clean_data.py
 
-import logging
+"""Clean weather data and extract metadata."""
+
 import sys
-from haashi_pkg.data_engine import DataLoader, DataAnalyzer
-from haashi_pkg.utility import Logger
+import logging
+from typing import Optional, Tuple
+
 from pandas import DataFrame, Series
-from typing import Iterable, Union
+from haashi_pkg.utility import Logger
+from haashi_pkg.data_engine import DataLoader, DataAnalyzer
+
 
 # pyright: basic
 
-logger = Logger(level=logging.INFO)
-
 
 def get_station_labels(
-    df: DataFrame, name_col: str, date_col: str
-) -> tuple[str, str, str]:
+    df: DataFrame,
+    name_col: str,
+    date_col: str
+) -> Tuple[str, str, str]:
+    """Extract station name and date range labels from weather data."""
+    # Get station name(s)
+    station_names = df[name_col].unique().tolist()
+    station_name = station_names[0] if len(
+        station_names) == 1 else ", ".join(station_names)
 
-    # get station name/names
-    station_name = df[name_col].unique().tolist()
-
-    station_name = station_name[0] if len(
-        station_name) == 1 else ", ".join(station_name)
-
-    # get start and end date
+    # Get date range
     start_date = df[date_col].min()
     end_date = df[date_col].max()
 
     start_str = start_date.strftime("%b %Y")
     end_str = end_date.strftime("%b %Y")
 
-    return (station_name, start_str, end_str)
+    return station_name, start_str, end_str
 
 
 def clean_data(
     filepath: str = "data/4150697.csv",
-    logger: Logger = logger,
+    logger: Optional[Logger] = None,
     can_return: bool = True,
-) -> Iterable[Union[DataFrame, str]] | None:
+) -> Optional[Tuple[DataFrame, str, str, str]]:
+    """
+    Clean weather data and extract metadata.
 
-    logger.debug("Loading data from file...")
-    weather_data_df = DataLoader(filepath, logger=logger).load_csv_single()
+    Returns temperature data (date, tmax, tmin) and labels
+    (station_name, start_date, end_date).
+    """
+    if logger is None:
+        logger = Logger(level=logging.INFO)
 
-    logger.debug("Cleaning data...")
-    analyze = DataAnalyzer(logger=logger)
+    logger.info(f"Loading weather data from {filepath}")
 
-    # Initial inspection of dataset -> First 5 rows
-    analyze.inspect_dataframe(weather_data_df, verbose=False)
+    # Load data
+    loader = DataLoader(filepath, logger=logger)
+    weather_df = loader.load_csv_single()
 
-    weather_data_df = analyze.normalize_column_names(weather_data_df)
+    logger.debug(f"Loaded {len(weather_df)} records")
+    logger.debug("Starting data cleaning...")
 
-    # Converting Date column
-    weather_data_df["date"] = analyze.convert_datetime(
-        Series(weather_data_df["date"])
-    )
+    # Initialize analyzer
+    analyzer = DataAnalyzer(logger=logger)
 
-    # Dropping missing rows
-    # Initial inspection of missing rows
-    num_missing = analyze.count_missing(
-        weather_data_df, [col for col in weather_data_df.columns]
-    )
+    # Normalize column names
+    weather_df = analyzer.normalize_column_names(weather_df)
 
-    missing_rows = weather_data_df[weather_data_df.isna().any(axis=1)]
-    weather_data_df = weather_data_df.drop(missing_rows.index)
+    # Convert date column
+    logger.debug("Converting date column to datetime")
+    weather_df["date"] = analyzer.convert_datetime(Series(weather_df["date"]))
 
-    # Final inspection of missing rows
-    num_missing = analyze.count_missing(
-        weather_data_df, [col for col in weather_data_df.columns]
-    )
+    # Check for missing values
+    all_columns = list(weather_df.columns)
+    missing_counts = analyzer.count_missing(weather_df, all_columns)
+    total_missing = sum(missing_counts)
 
-    weather_data_df = weather_data_df.sort_values("date")
+    if total_missing > 0:
+        logger.debug(f"Found {total_missing} missing values")
 
+        # Drop rows with any missing values
+        missing_rows = weather_df[weather_df.isna().any(axis=1)]
+        logger.debug(f"Dropping {len(missing_rows)} rows with missing data")
+        weather_df = weather_df.drop(missing_rows.index)
+
+    # Sort by date
+    weather_df = weather_df.sort_values("date")
+
+    # Extract metadata
     station_name, start_str, end_str = get_station_labels(
-        weather_data_df, "name", "date"
+        weather_df, "name", "date"
     )
 
-    # Final inspection of dataset
-    analyze.inspect_dataframe(weather_data_df, verbose=False)
+    logger.info("Data cleaning completed")
+    logger.info(f"  Station: {station_name}")
+    logger.info(f"  Date range: {start_str} - {end_str}")
+    logger.info(f"  Records: {len(weather_df)}")
 
     if can_return:
         return (  # type: ignore
-            weather_data_df[["date", "tmax", "tmin"]],
+            weather_df[["date", "tmax", "tmin"]],
             station_name,
             start_str,
             end_str
         )
 
+    return None
+
+
+def main() -> None:
+    """Run data cleaning as standalone script."""
+    logger = Logger(level=logging.INFO)
+
+    try:
+        logger.info("Starting weather data cleaning...")
+        clean_data(logger=logger, can_return=False)
+        logger.info("Cleaning completed")
+
+    except KeyboardInterrupt:
+        logger.info("\nProcess interrupted by user")
+        sys.exit(0)
+
+    except Exception as e:
+        logger.error(exception=e, save_to_json=True)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
-    try:
-        clean_data(can_return=False)
-    except KeyboardInterrupt:
-        logger.info("\nCleaning process interrupted.")
-        sys.exit(0)
+    main()
+

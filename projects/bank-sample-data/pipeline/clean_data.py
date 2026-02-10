@@ -2,122 +2,203 @@
 
 # clean_data.py
 
-import logging
+"""
+Clean Bank Statement Data
+
+This module cleans raw bank statement data by normalizing column names,
+converting data types, masking sensitive information, and removing unwanted
+transactions.
+
+Functions:
+    mask_description: Replace description patterns with generic labels
+    drop_description: Remove transactions matching specific patterns
+    clean_data: Main cleaning pipeline for bank statement data
+"""
+
 import sys
-from haashi_pkg.data_engine import DataLoader, DataAnalyzer, DataSaver
-from haashi_pkg.utility import Logger
+import logging
+from typing import Optional
+
 from pandas import DataFrame
+from haashi_pkg.utility import Logger
+from haashi_pkg.data_engine import DataLoader, DataAnalyzer, DataSaver
 
 
-# Initializtion
-logger = Logger(level=logging.INFO)
+# Configuration: Patterns to mask with generic descriptions
+MASKING_MAP = {
+    "Transfer": "Transfers",
+    "Mobile|Airtime|SMS|USSD": "Phone & Data",
+    "Electricity": "Electricity bill",
+    "Card|Merchant": "Purchases",
+}
 
 
 def mask_description(
-    df: DataFrame, col: str, pattern: str, generic_desc: str
+    df: DataFrame,
+    col: str,
+    pattern: str,
+    generic_desc: str
 ) -> None:
-    df.loc[df[col].str.contains(pattern, na=False), col] = generic_desc
+    """
+    Replace description patterns with generic labels for privacy/grouping.
+
+    Modifies the DataFrame in-place by masking matching descriptions.
+
+    """
+    mask = df[col].str.contains(pattern, na=False)
+    df.loc[mask, col] = generic_desc
 
 
 def drop_description(
-    df: DataFrame, col: str, pattern: str
+    df: DataFrame,
+    col: str,
+    pattern: str
 ) -> DataFrame:
-    rows_to_drop = DataFrame(df[df[col].str.contains(pattern, na=False)])
+    """
+    Remove transactions with descriptions matching a pattern.
+
+    Returns a new DataFrame with matching rows removed.
+
+    """
+    mask = df[col].str.contains(pattern, na=False)
+    rows_to_drop = df[mask]
     return df.drop(rows_to_drop.index)
 
 
 def clean_data(
     filepath: str = "data/sample_bank_statement_2025.xlsx",
     savepath: str = "data/cleaned_bank_statement_2025.parquet",
-    USE_FAKE_DATA: bool = True,
-    logger: Logger = logger
+    use_fake_data: bool = True,
+    logger: Optional[Logger] = None
 ) -> None:
+    """
+    Clean raw bank statement data and save as compressed Parquet.
 
-    MASKING_MAP = {
-        "Transfer": "Transfers",
-        "Mobile|Airtime|SMS|USSD": "Phone & Data",
-        "Electricity": "Electricity bill",
-        "Card|Merchant": "Purchases",
-    }
+    Performs the following operations:
+    1. Loads Excel data (skipping header rows if needed)
+    2. Normalizes column names
+    3. Filters to debit-only transactions
+    4. Removes unnecessary columns
+    5. Drops specific transaction types (savings, investments)
+    6. Masks sensitive information
+    7. Converts data types
+    8. Adds derived columns (transaction month)
+    9. Saves as compressed Parquet
 
-    file_path: str = (
-        filepath if USE_FAKE_DATA else "data/bank_statement_2025.xlsx"
-    )
+    """
+    # Initialize logger if not provided
+    if logger is None:
+        logger = Logger(level=logging.INFO)
 
-    rows_to_skip: int = 0 if USE_FAKE_DATA else 6
+    # Determine file path and skip rows based on data source
+    file_path = filepath if use_fake_data else "data/bank_statement_2025.xlsx"
+    rows_to_skip = 0 if use_fake_data else 6
 
-    # load data
-    logger.debug("Loading data...")
-    bank_st_df = DataFrame(
-        DataLoader(file_path, logger=logger)
-        .load_excel_single(skip_rows=rows_to_skip)
-    )
+    logger.info(f"Loading data from {file_path}")
+    logger.debug(f"Skipping {rows_to_skip} header rows")
 
-    logger.debug("Cleaning data...")
-    analyze = DataAnalyzer(logger=logger)
+    # Load data
+    loader = DataLoader(file_path, logger=logger)
+    bank_st_df = loader.load_excel_single(skip_rows=rows_to_skip)
 
-    # inspect data
-    analyze.inspect_dataframe(bank_st_df, verbose=False)
+    logger.info(f"Loaded {len(bank_st_df)} transactions")
+    logger.debug("Starting data cleaning...")
 
-    # ---------------------
-    # Cleaning
-    # ---------------------
+    # Initialize analyzer
+    analyzer = DataAnalyzer(logger=logger)
 
-    bank_st_df = analyze.normalize_column_names(bank_st_df)
-
+    # Normalize column names
+    logger.debug("Normalizing column names")
+    bank_st_df = analyzer.normalize_column_names(bank_st_df)
     bank_st_df.columns = bank_st_df.columns.str.replace(" ", "_")
+
+    # Filter to debit transactions only
+    logger.debug("Filtering to debit transactions only")
+    initial_count = len(bank_st_df)
     bank_st_df = bank_st_df[bank_st_df["credit(₦)"] == "--"]
-    bank_st_df = bank_st_df.drop(columns=[
+    logger.debug(f"Kept {len(bank_st_df)}/{initial_count} debit transactions")
+
+    # Drop unnecessary columns
+    logger.debug("Removing unnecessary columns")
+    columns_to_drop = [
         "value_date",
         "channel",
         "credit(₦)",
         "balance_after(₦)",
         "transaction_reference",
-    ])
+    ]
+    bank_st_df = bank_st_df.drop(columns=columns_to_drop)
 
-    bank_st_df = DataFrame(
-        bank_st_df.rename(columns={"trans._date": "trans_date"})
-    )
+    # Rename trans._date column
+    bank_st_df = bank_st_df.rename(columns={"trans._date": "trans_date"})
 
-    # ---------------------
-    # Dropping descriptions
-    # ---------------------
+    # Drop specific transaction types
+    logger.debug("Removing savings and investment transactions")
 
-    num_pattern: str = "8051021438|9058929223|8111016740|9037527321"
-    string_pattern: str = "Save|OWealth|Fixed"
+    # Patterns for transactions to exclude
+    phone_numbers = "8051021438|9058929223|8111016740|9037527321"
+    keywords = "Save|OWealth|Fixed"
 
-    bank_st_df = drop_description(bank_st_df, "description", num_pattern)
-    bank_st_df = drop_description(bank_st_df, "description", string_pattern)
+    before_drop = len(bank_st_df)
+    bank_st_df = drop_description(bank_st_df, "description", phone_numbers)
+    bank_st_df = drop_description(bank_st_df, "description", keywords)
+    dropped = before_drop - len(bank_st_df)
 
-    # -----------------
-    # Masking
-    # -----------------
+    logger.debug(f"Removed {dropped} excluded transactions")
 
-    for desc, generic_desc in MASKING_MAP.items():
-        mask_description(bank_st_df, "description", desc, generic_desc)
+    # Mask sensitive/specific descriptions with generic labels
+    logger.debug("Masking transaction descriptions")
+    for pattern, generic_desc in MASKING_MAP.items():
+        mask_description(bank_st_df, "description", pattern, generic_desc)
 
-    # -----------------
-    # Conversions
-    # -----------------
-
-    bank_st_df["trans_date"] = analyze.convert_datetime(
+    # Convert data types
+    logger.debug("Converting data types")
+    bank_st_df["trans_date"] = analyzer.convert_datetime(
         bank_st_df["trans_date"])
     bank_st_df["description"] = bank_st_df["description"].astype("category")
-    bank_st_df["debit(₦)"] = analyze.convert_numeric(bank_st_df["debit(₦)"])
+    bank_st_df["debit(₦)"] = analyzer.convert_numeric(bank_st_df["debit(₦)"])
 
-    # New column
+    # Add derived column: transaction month
+    logger.debug("Adding transaction month column")
     bank_st_df["trans_month"] = bank_st_df["trans_date"].dt.to_period("M")
 
-    # Final inspection
-    analyze.inspect_dataframe(bank_st_df, verbose=False)
+    # Final validation
+    logger.debug("Validating cleaned data")
+    analyzer.validate_columns_exist(
+        bank_st_df,
+        ["trans_date", "description", "debit(₦)", "trans_month"]
+    )
 
-    # Save data
-    DataSaver(logger=logger).save_parquet_compressed(bank_st_df, savepath)
+    logger.info(f"Cleaning completed: {len(bank_st_df)} transactions retained")
+    logger.info(
+        f"Date range: {bank_st_df['trans_date'].min()} to {bank_st_df['trans_date'].max()}")
+    logger.info(f"Categories: {bank_st_df['description'].nunique()}")
+
+    # Save cleaned data
+    logger.debug(f"Saving to {savepath}")
+    saver = DataSaver(logger=logger)
+    saver.save_parquet_compressed(bank_st_df, savepath)
+
+    logger.info(f"Data cleaned and saved to {savepath}")
+
+
+def main() -> None:
+    """Run data cleaning as standalone script."""
+    logger = Logger(level=logging.INFO)
+
+    try:
+        logger.info("Starting bank statement cleaning...")
+        clean_data(logger=logger)
+        logger.info("Cleaning completed successfully")
+
+    except KeyboardInterrupt:
+        logger.info("\n\nProcess interrupted by user")
+        sys.exit(0)
+
+    except Exception as e:
+        logger.error(exception=e, save_to_json=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    try:
-        clean_data()
-    except KeyboardInterrupt:
-        logger.info("\n\nInterrupted by user")
-        sys.exit(0)
+    main()
